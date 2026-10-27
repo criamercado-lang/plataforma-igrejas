@@ -9,7 +9,7 @@ export class ErroApi extends Error {
 
 function env(nome: string): string {
   const v = process.env[nome];
-  if (!v) throw new ErroApi(500, `Variável de ambiente ${nome} não configurada`);
+  if (!v) throw new ErroApi(503, `Servidor sem configuração: falta ${nome} nas variáveis do Netlify`);
   return v;
 }
 
@@ -80,7 +80,7 @@ export function json(dados: unknown, status = 200): Response {
 
 export function erro(e: unknown): Response {
   if (e instanceof ErroApi) {
-    const status = e.status >= 400 && e.status < 500 ? e.status : 500;
+    const status = (e.status >= 400 && e.status < 500) || e.status === 503 ? e.status : 500;
     const msg = status === 500 ? "Erro no servidor. Tente de novo em instantes." : e.message;
     if (status === 500) console.error(e);
     return json({ erro: msg }, status);
