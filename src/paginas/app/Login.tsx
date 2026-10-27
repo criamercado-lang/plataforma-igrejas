@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { entrar, esqueciSenha } from "../../lib/api";
+import { entrar, erroDoLink, esqueciSenha } from "../../lib/api";
 import { Aviso } from "../../ui";
 
 export default function Login({ emailFixo, titulo, aoEntrar }: { emailFixo?: string; titulo?: string; aoEntrar?: () => void }) {
   const [email, setEmail] = useState(emailFixo ?? "");
   const [senha, setSenha] = useState("");
-  const [erro, setErro] = useState("");
+  const [erro, setErro] = useState(() => erroDoLink() ?? "");
   const [info, setInfo] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [pedindo, setPedindo] = useState(false);
+  const [pedido, setPedido] = useState(false);
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,11 +36,16 @@ export default function Login({ emailFixo, titulo, aoEntrar }: { emailFixo?: str
       setErro("Digite seu e-mail primeiro.");
       return;
     }
+    if (pedindo) return;
+    setPedindo(true);
     try {
       await esqueciSenha(email);
-      setInfo("Se este e-mail tiver conta, você vai receber um link para criar uma nova senha.");
+      setPedido(true);
+      setInfo("Enviamos um link para criar uma nova senha. Abra o e-mail mais recente (veja também o spam). Pode levar alguns minutos.");
     } catch (err) {
       setErro((err as Error).message);
+    } finally {
+      setPedindo(false);
     }
   };
 
@@ -58,9 +65,11 @@ export default function Login({ emailFixo, titulo, aoEntrar }: { emailFixo?: str
       <button className="botao largo" type="submit" disabled={enviando}>
         {enviando ? "Entrando…" : "Entrar"}
       </button>
-      <button type="button" className="botao secundario pequeno" onClick={recuperar} style={{ alignSelf: "center" }}>
-        Esqueci a senha
-      </button>
+      {!pedido && (
+        <button type="button" className="botao secundario pequeno" onClick={recuperar} disabled={pedindo} style={{ alignSelf: "center" }}>
+          {pedindo ? "Enviando…" : "Esqueci a senha"}
+        </button>
+      )}
     </form>
   );
 }

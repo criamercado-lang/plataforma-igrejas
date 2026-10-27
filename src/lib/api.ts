@@ -56,6 +56,7 @@ export function aoMudarSessao(f: (s: Sessao | null) => void): () => void {
 // ---------------------------------------------------------------- erros
 const TRADUCOES: [RegExp, string][] = [
   [/invalid login credentials/i, "E-mail ou senha incorretos."],
+  [/rate limit|only request this after/i, "Muitos pedidos seguidos. Espere alguns minutos e peça de novo (só uma vez)."],
   [/row-level security|permission denied/i, "Você não tem permissão para fazer isso."],
   [/duplicate key value.*churches_slug/i, "Já existe uma igreja com esse endereço."],
   [/duplicate key value.*assignments_service_id_volunteer_id/i, "A mesma pessoa não pode estar em duas funções no mesmo culto."],
@@ -154,6 +155,16 @@ export async function esqueciSenha(email: string): Promise<void> {
     { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim() }) },
     false,
   );
+}
+
+/** Link do e-mail vencido ou já usado: #error=access_denied&error_code=otp_expired… Devolve a mensagem e limpa a barra. */
+export function erroDoLink(): string | null {
+  if (!/[#&]error=/.test(location.hash)) return null;
+  const p = new URLSearchParams(location.hash.slice(1));
+  history.replaceState(null, "", location.pathname);
+  return p.get("error_code") === "otp_expired" || /expired|invalid/i.test(p.get("error_description") ?? "")
+    ? "Esse link expirou ou já foi usado. Se você pediu mais de um e-mail, só o último funciona. Peça um novo abaixo."
+    : "Não foi possível abrir o link do e-mail. Peça um novo abaixo.";
 }
 
 /** Link do e-mail de "esqueci a senha": #access_token=…&refresh_token=…&type=recovery */
